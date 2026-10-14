@@ -94,6 +94,8 @@ jobs:
           s = p.read_text()
           s = s.replace("SmallTopAppBar", "TopAppBar")
           s = s.replace("smallTopAppBarColors", "topAppBarColors")
+          # KeyboardOptions is in foundation.text, not ui.text.input.
+          s = s.replace("import androidx.compose.ui.text.input.KeyboardOptions", "")
           if "import androidx.compose.foundation.text.KeyboardOptions" not in s:
               lines = s.splitlines()
               package_index = next((i for i, line in enumerate(lines) if line.startswith("package ")), -1)
@@ -102,8 +104,10 @@ jobs:
               lines.insert(package_index + 1, "")
               lines.insert(package_index + 2, "import androidx.compose.foundation.text.KeyboardOptions")
               s = "\n".join(lines) + "\n"
+          # ContentResolver display names are nullable; normalize before lowercase().
+          s = s.replace("val lowerName = displayName.lowercase(Locale.ROOT)", "val lowerName = displayName.orEmpty().lowercase(Locale.ROOT)")
           p.write_text(s)
-          print("Applied TopAppBar and KeyboardOptions compatibility fixes.")
+          print("Applied TopAppBar, KeyboardOptions import, and nullable display-name fixes.")
           PY
           echo "---- MainActivity.kt context after compatibility patch ----"
           nl -ba "$file" | sed -n '65,102p;745,760p;900,914p;1140,1152p'
