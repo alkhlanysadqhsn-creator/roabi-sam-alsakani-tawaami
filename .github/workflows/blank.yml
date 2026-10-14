@@ -106,8 +106,13 @@ jobs:
               s = "\n".join(lines) + "\n"
           # ContentResolver display names are nullable; normalize before lowercase().
           s = s.replace("val lowerName = displayName.lowercase(Locale.ROOT)", "val lowerName = displayName.orEmpty().lowercase(Locale.ROOT)")
+          # Kotlin properties memoryEnabled/darkMode already generate JVM setters named
+          # setMemoryEnabled(boolean)/setDarkMode(boolean). Rename manually declared
+          # methods and their call sites to avoid duplicate JVM signatures.
+          s = s.replace("setMemoryEnabled", "updateMemoryEnabled")
+          s = s.replace("setDarkMode", "updateDarkMode")
           p.write_text(s)
-          print("Applied TopAppBar, KeyboardOptions import, and nullable display-name fixes.")
+          print("Applied TopAppBar, KeyboardOptions, nullable display-name, and setter-clash fixes.")
           PY
           echo "---- MainActivity.kt context after compatibility patch ----"
           nl -ba "$file" | sed -n '65,102p;745,760p;900,914p;1140,1152p'
