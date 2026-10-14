@@ -78,6 +78,36 @@ jobs:
           test -f app/src/main/AndroidManifest.xml
           if [ -f gradlew ]; then chmod +x gradlew; fi
 
+      - name: Patch known Kotlin compile blockers and print source context
+        shell: bash
+        run: |
+          set -euo pipefail
+          project_dir="${{ steps.locate.outputs.project_dir }}"
+          file="$project_dir/app/src/main/java/com/tawaami/app/MainActivity.kt"
+          test -f "$file"
+          echo "---- MainActivity.kt context before compatibility patch ----"
+          nl -ba "$file" | sed -n '65,102p;745,760p;900,914p;1140,1152p'
+          python3 - "$file" <<'PY'
+          from pathlib import Path
+          import sys
+          p = Path(sys.argv[1])
+          s = p.read_text()
+          s = s.replace("SmallTopAppBar", "TopAppBar")
+          s = s.replace("smallTopAppBarColors", "topAppBarColors")
+          if "import androidx.compose.foundation.text.KeyboardOptions" not in s:
+              lines = s.splitlines()
+              package_index = next((i for i, line in enumerate(lines) if line.startswith("package ")), -1)
+              if package_index < 0:
+                  raise SystemExit("Could not locate package declaration in MainActivity.kt")
+              lines.insert(package_index + 1, "")
+              lines.insert(package_index + 2, "import androidx.compose.foundation.text.KeyboardOptions")
+              s = "\n".join(lines) + "\n"
+          p.write_text(s)
+          print("Applied TopAppBar and KeyboardOptions compatibility fixes.")
+          PY
+          echo "---- MainActivity.kt context after compatibility patch ----"
+          nl -ba "$file" | sed -n '65,102p;745,760p;900,914p;1140,1152p'
+
       - name: Build debug APK
         shell: bash
         run: |
